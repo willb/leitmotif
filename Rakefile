@@ -16,7 +16,7 @@ Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://guides.rubygems.org/specification-reference/ for more options
   gem.name = "leitmotif"
   gem.homepage = "http://github.com/willb/leitmotif"
-  gem.license = "MIT"
+  gem.license = "Apache-2.0"
   gem.summary = %Q{yet another project template tool}
   gem.description = %Q{there are many like it, but this one is mine}
   gem.email = "self@willbenton.com"
