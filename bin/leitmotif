@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+require "rubygems"
+require "thor"
+require "leitmotif"
+
+class LeitmotifCLI < Thor
+  desc "generate PROTOTYPE OUTPUT_DIR", "instantiate PROTOTYPE into OUTPUT_DIR"
+  method_option :clobber, :type => :boolean, :desc => "overwrite OUTPUT_DIR if it exists"
+  method_option :ref, :type => :string, :desc => "git tree-ish to use for PROTOTYPE instantiation"
+  method_option :bindings, :type => :hash, :desc => "variable bindings for PROTOTYPE instantiation, in the form KEY:VALUE"
+  def generate(prototype, output_dir)
+    puts "prototype is #{prototype}"
+    puts "output_dir is #{output_dir}"
+    puts "options are #{options.inspect}"
+  end
+end
+
+LeitmotifCLI.start

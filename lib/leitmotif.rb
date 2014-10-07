@@ -46,7 +46,7 @@ class Leitmotif
   def _run(prototype, outputDir)
     check_output_dir(outputDir)
     
-    meta, archive = get_meta_and_proto(prototype, @options[:default_treeish])
+    meta, archive = get_meta_and_proto(prototype, (@options[:ref] || @options[:default_treeish]))
     ymeta = YAML.load(meta)
     
     raise "#{prototype} doesn't look like a leitmotif prototype" unless (ymeta && list_proto(archive).size > 0)
