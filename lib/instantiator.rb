@@ -14,13 +14,17 @@
 
 USE_ERUBIS = false
 
+# XXX: refactor this ugliness
 if USE_ERUBIS
 
   require 'erubis'
 
   class Instantiator
-    def initialize(hash)
+    DEFAULT_OPTIONS = {:safe_level => 3}
+
+    def initialize(hash, options = nil)
       @vars = hash.dup
+      @options = DEFAULT_OPTIONS.merge((options || {}))
     end
 
     def process(input)
@@ -33,6 +37,8 @@ else # USE_ERUBIS
   require 'erb'
 
   class Instantiator
+    DEFAULT_OPTIONS = {:safe_level => 3}
+    
     # this is the least terrible way to instantiate ERb with a hash
     # source: http://stackoverflow.com/a/5462069/192616
     class Namespace
@@ -48,12 +54,19 @@ else # USE_ERUBIS
       end
     end
     
-    def initialize(vars)
+    def initialize(vars, options = nil)
+      @options = DEFAULT_OPTIONS.merge((options || {}))
       @ns = Namespace.new(vars)
     end
   
     def process(template)
-      ERB.new(template).result(@ns.get_binding)
+      vars = @ns.get_binding
+      
+      vars.untaint
+      template.untaint
+      
+      # XXX: $SAFE level should be irrelevant here; only the supplied bindings should be available
+      ERB.new(template, @options[:safe_level]).result(vars)
     end
   end
 
