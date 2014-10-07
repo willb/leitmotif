@@ -17,6 +17,7 @@ $:.unshift File.dirname(__FILE__)
 require 'fileutils'
 require 'find'
 require 'open3'
+require 'yaml'
 
 require 'instantiator'
 
