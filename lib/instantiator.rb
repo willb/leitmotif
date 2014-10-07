@@ -53,8 +53,6 @@ else # USE_ERUBIS
     end
   
     def process(template)
-      puts "binding is #{@ns.get_binding.inspect}" if $LEITMOTIF_DEBUG
-      
       ERB.new(template).result(@ns.get_binding)
     end
   end
