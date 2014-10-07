@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-$:.unshift File.dirname(__FILE__)
+$:.unshift File.dirname(__FILE__) # SKIP_FOR_STANDALONE
 
 require 'fileutils'
 require 'find'
 require 'open3'
 require 'yaml'
 
-require 'instantiator'
+require 'instantiator' # SKIP_FOR_STANDALONE
 
 class Leitmotif
   DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
@@ -52,7 +52,11 @@ class Leitmotif
     
     raise "#{prototype} doesn't look like a leitmotif prototype" unless (ymeta && list_proto(archive).size > 0)
     
-    hash = (ymeta[:defaults] || {}).merge(@bindings)
+    hash = (ymeta[:defaults] || {}).merge(@bindings).inject({}){|acc,(k,v)| acc[k.to_s] = v; acc}
+    missing_required = (ymeta[:required] || []).select {|k| !hash.has_key?(k)}
+    
+    raise "prototype #{prototype} requires values for the following variables:  #{missing_required.join(", ")}" unless missing_required == []
+    
     ignore = (ymeta[:ignore] || [])
     
     FileUtils.mkdir_p(outputDir)
