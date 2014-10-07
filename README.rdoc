@@ -1,6 +1,7 @@
 = leitmotif
 
-Description goes here.
+Leitmotif is yet another tool for generating directory trees from prototypes.  It is designed to be 
+extremely simple and have minimal dependencies.
 
 == Contributing to leitmotif
  
