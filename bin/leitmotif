@@ -2,15 +2,18 @@
 
 require "rubygems"
 require "thor"
-require "leitmotif"
+require "leitmotif" # SKIP_FOR_STANDALONE
 
 class LeitmotifCLI < Thor
   desc "generate PROTOTYPE OUTPUT_DIR", "instantiate PROTOTYPE into OUTPUT_DIR"
   method_option :clobber, :type => :boolean, :desc => "overwrite OUTPUT_DIR if it exists"
   method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
   method_option :ref, :type => :string, :desc => "git tree-ish to use for PROTOTYPE instantiation"
   method_option :bindings, :type => :hash, :desc => "variable bindings for PROTOTYPE instantiation, in the form KEY:VALUE"
   def generate(prototype, output_dir)
+    $LEITMOTIF_DEBUG = options["debug"]
+    
     puts "prototype is #{prototype}" if $LEITMOTIF_DEBUG
     puts "output_dir is #{output_dir}" if $LEITMOTIF_DEBUG
     puts "options are #{options.inspect}" if @LEITMOTIF_DEBUG
