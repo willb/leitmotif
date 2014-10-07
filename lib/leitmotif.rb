@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+$:.unshift File.dirname(__FILE__)
+
 require 'fileutils'
 require 'find'
 require 'open3'
 
+require 'instantiator'
+
 class Leitmotif
-  DEFAULT_OPTIONS = {:git => "/usr/bin/git", :tar => "/usr/bin/tar", :treeish => "master"}
+  DEFAULT_OPTIONS = {:git => "/usr/bin/git", :tar => "/usr/bin/tar", :default_treeish => "master", :verbose => false}
   
   def initialize(hash = nil, options = nil)
     @bindings = (hash || {}).dup
@@ -28,32 +32,37 @@ class Leitmotif
     begin
       _run(template, outputDir)
     rescue Exception=>ex
-      puts "fatal error:  #{ex}"
-      puts ex.backtrace.join("\n")
+      puts "error:  #{ex}"
+      puts ex.backtrace.join("\n") if (@options[:verbose] || $LEITMOTIF_DEBUG)
       1
     end
   end
   
   def _run(template, outputDir)
-    metaFile = File.join(template, ".leitmotif")
-    meta = File.exists?(metaFile) && YAML.load_file(metaFile)
-    
-#    raise "#{template} doesn't look like a leitmotif prototype" unless (meta && File.directory?(proto))
     raise "#{outputDir} already exists; move it first" if (File.exists?(outputDir))
     
-    defaults = @bindings.merge(meta[:defaults] || {})
+    meta, archive = get_meta_and_proto(template, @options[:default_treeish])
+    ymeta = YAML.load(meta)
     
-    archive = get_proto(template, @options[:treeish])
+    raise "#{template} doesn't look like a leitmotif prototype" unless (ymeta && list_proto(archive).size > 0)
+    
+    hash = (ymeta[:defaults] || {}).merge(@bindings)
+    ignore = (ymeta[:ignore] || [])
     
     FileUtils.mkdir_p(outputDir)
     oldcwd = Dir.getwd()
     Dir.chdir(outputDir)
     
     begin
-      spawn_with_input(archive, %q{tar x --strip 1})
+      unpack_proto!(archive)
+      instantiator = Instantiator.new(@bindings)
       
       Find.find(".") do |templateFile|
-        basename = templateFile
+        if File.ftype(templateFile) == "file" && !ignore.member?(templateFile)
+          oldFile = File.open(templateFile, "r") {|f| f.read}
+          result = instantiator.process(oldFile)
+          File.open(templateFile, "w") {|f| f.write(result)}
+        end
       end
     ensure
       Dir.chdir(oldcwd)
@@ -61,16 +70,40 @@ class Leitmotif
     0
   end
   
+  def get_meta_and_proto(remote, treeish = nil)
+    meta = nil
+    proto = nil
+    
+    begin
+      treeish ||= @options[:default_treeish]
+      meta = get_meta(remote, treeish)
+      proto = get_proto(remote, treeish)
+    rescue Exception=>ex
+      raise "fatal error loading leitmotif template and metadata: #{ex}"
+    end
+    
+    [meta, proto]
+  end
+  
   def get_meta(remote, treeish = nil)
-    treeish ||= @options[:treeish]
+    treeish ||= @options[:default_treeish]
     metaArchive = spawn_and_capture(%Q{#{@options[:git]} archive --remote #{remote} #{treeish} .leitmotif})
     meta, = spawn_with_input(metaArchive, %Q{#{@options[:tar]} xO .leitmotif})
     meta
   end
   
   def get_proto(remote, treeish = nil)
-    treeish ||= @options[:treeish]
+    treeish ||= @options[:default_treeish]
     spawn_and_capture(%Q{#{@options[:git]} archive --remote #{remote} #{treeish} proto})
+  end
+  
+  def unpack_proto!(archive)
+    spawn_with_input(archive, %Q{#{@options[:tar]} x --strip 1})
+  end
+  
+  def list_proto(archive)
+    out, err = spawn_with_input(archive, %Q{#{@options[:tar]} t})
+    out.split("\n")
   end
   
   def spawn_and_capture(*cmd)
