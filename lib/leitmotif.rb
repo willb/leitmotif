@@ -28,9 +28,9 @@ class Leitmotif
     @options = DEFAULT_OPTIONS.merge(options || {})
   end
   
-  def run(template, outputDir)
+  def run(prototype, outputDir)
     begin
-      _run(template, outputDir)
+      _run(prototype, outputDir)
     rescue Exception=>ex
       puts "error:  #{ex}"
       puts ex.backtrace.join("\n") if (@options[:verbose] || $LEITMOTIF_DEBUG)
@@ -38,13 +38,13 @@ class Leitmotif
     end
   end
   
-  def _run(template, outputDir)
+  def _run(prototype, outputDir)
     raise "#{outputDir} already exists; move it first" if (File.exists?(outputDir))
     
-    meta, archive = get_meta_and_proto(template, @options[:default_treeish])
+    meta, archive = get_meta_and_proto(prototype, @options[:default_treeish])
     ymeta = YAML.load(meta)
     
-    raise "#{template} doesn't look like a leitmotif prototype" unless (ymeta && list_proto(archive).size > 0)
+    raise "#{prototype} doesn't look like a leitmotif prototype" unless (ymeta && list_proto(archive).size > 0)
     
     hash = (ymeta[:defaults] || {}).merge(@bindings)
     ignore = (ymeta[:ignore] || [])
@@ -79,7 +79,7 @@ class Leitmotif
       meta = get_meta(remote, treeish)
       proto = get_proto(remote, treeish)
     rescue Exception=>ex
-      raise "fatal error loading leitmotif template and metadata: #{ex}"
+      raise "fatal error loading leitmotif prototype and metadata: #{ex}"
     end
     
     [meta, proto]
