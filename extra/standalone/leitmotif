@@ -81,12 +81,83 @@ require 'open3'
 require 'yaml'
 
 
+module LMProcessHelpers
+  
+  def spawn_and_capture(*cmd)
+    Open3.popen3(*cmd) do |stdin, stdout, stderr, wait_thr|
+      exit_status = wait_thr.value
+      raise "command '#{cmd.inspect}' failed; more details follow:  #{stderr.read}" unless exit_status == 0
+      stdout.read
+    end
+  end
+  
+  def spawn_with_input(str, *cmd)
+    out, err, s = Open3.capture3(*cmd, :stdin_data=>str)
+    raise "command '#{cmd.inspect}' failed; more details follow:  #{err}" unless s.exitstatus == 0
+    [out, err]
+  end
+end
+
+module LMPath
+  def self.localPrototypeStore
+    File.join(Dir.home, ".leitmotif-prototypes")
+  end
+end
+
+class LocalPrototypeStore
+  DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
+      :verbose => false, 
+      :clobber => false}
+  
+  def initialize(options = nil)
+    @options = DEFAULT_OPTIONS.merge(options || {})
+    @localps = LMPath::localPrototypeStore
+    unless File.exists?(@localps)
+      FileUtils.mkdir_p(@localps)
+    end
+  end
+  
+  include LMProcessHelpers
+  
+  def cloneProto(remoteURL)
+    begin
+      prototypeName = prototype_name(remoteURL)
+      spawn_and_capture(%Q{#{@options[:git]} clone #{remoteURL} "#{File.join(LMPath::localPrototypeStore, prototypeName)}"})
+      0
+    rescue Exception=>ex
+      puts "error:  #{ex}"
+      puts ex.backtrace.join("\n") if (@options[:verbose] || $LEITMOTIF_DEBUG)
+      1
+    end
+  end
+  
+  def list()
+    begin
+      Dir[File.join(LMPath::localPrototypeStore, "*")].each do |proto|
+        puts prototype_name(proto)
+      end
+      0
+    rescue Exception=>ex
+      puts "error:  #{ex}"
+      puts ex.backtrace.join("\n") if (@options[:verbose] || $LEITMOTIF_DEBUG)
+      1
+    end
+  end
+  
+  private
+  def prototype_name(url)
+    url.split("/").pop.gsub(".git", "")
+  end
+  
+end
+
 class Leitmotif
   DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
       :tar => "/usr/bin/tar", 
       :default_treeish => "master", 
       :verbose => false, 
-      :clobber => false}
+      :clobber => false,
+      :local => false}
   
   def initialize(hash = nil, options = nil)
     @bindings = (hash || {}).dup
@@ -95,6 +166,10 @@ class Leitmotif
   
   def run(prototype, outputDir)
     begin
+      if @options[:local]
+        prototype = File.join(LMPath::localPrototypeStore, prototype)
+      end
+      
       _run(prototype, outputDir)
     rescue Exception=>ex
       puts "error:  #{ex}"
@@ -185,20 +260,8 @@ class Leitmotif
     out, err = spawn_with_input(archive, %Q{#{@options[:tar]} t})
     out.split("\n")
   end
-  
-  def spawn_and_capture(*cmd)
-    Open3.popen3(*cmd) do |stdin, stdout, stderr, wait_thr|
-      exit_status = wait_thr.value
-      raise "command '#{cmd.inspect}' failed; more details follow:  #{stderr.read}" unless exit_status == 0
-      stdout.read
-    end
-  end
-  
-  def spawn_with_input(str, *cmd)
-    out, err, s = Open3.capture3(*cmd, :stdin_data=>str)
-    raise "command '#{cmd.inspect}' failed; more details follow:  #{err}" unless s.exitstatus == 0
-    [out, err]
-  end
+
+  include LMProcessHelpers
 end
 
 require "rubygems"
@@ -208,6 +271,7 @@ class LeitmotifCLI < Thor
   desc "generate PROTOTYPE OUTPUT_DIR", "instantiate PROTOTYPE into OUTPUT_DIR"
   method_option :clobber, :type => :boolean, :desc => "overwrite OUTPUT_DIR if it exists"
   method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :local, :type => :boolean, :desc => "use a prototype from the user's local prototype store"
   method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
   method_option :ref, :type => :string, :desc => "git tree-ish to use for PROTOTYPE instantiation"
   method_option :bindings, :type => :hash, :desc => "variable bindings for PROTOTYPE instantiation, in the form KEY:VALUE"
@@ -219,6 +283,24 @@ class LeitmotifCLI < Thor
     puts "options are #{options.inspect}" if @LEITMOTIF_DEBUG
     symbolized_options = options.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
     exit(Leitmotif.new(symbolized_options[:bindings], symbolized_options).run(prototype, output_dir))
+  end
+  
+  desc "clone URL", "clone a remote prototype from URL to the local prototype store"
+  method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
+  def clone(url)
+    symbolized_options = options.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
+    
+    exit(LocalPrototypeStore.new(symbolized_options).cloneProto(url))
+  end
+  
+  desc "list", "show locally-installed prototypes"
+  method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
+  def list()
+    symbolized_options = options.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
+    
+    exit(LocalPrototypeStore.new(symbolized_options).list())
   end
 end
 
