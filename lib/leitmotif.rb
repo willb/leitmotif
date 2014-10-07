@@ -21,12 +21,83 @@ require 'yaml'
 
 require 'instantiator' # SKIP_FOR_STANDALONE
 
+module LMProcessHelpers
+  
+  def spawn_and_capture(*cmd)
+    Open3.popen3(*cmd) do |stdin, stdout, stderr, wait_thr|
+      exit_status = wait_thr.value
+      raise "command '#{cmd.inspect}' failed; more details follow:  #{stderr.read}" unless exit_status == 0
+      stdout.read
+    end
+  end
+  
+  def spawn_with_input(str, *cmd)
+    out, err, s = Open3.capture3(*cmd, :stdin_data=>str)
+    raise "command '#{cmd.inspect}' failed; more details follow:  #{err}" unless s.exitstatus == 0
+    [out, err]
+  end
+end
+
+module LMPath
+  def self.localPrototypeStore
+    File.join(Dir.home, ".leitmotif-prototypes")
+  end
+end
+
+class LocalPrototypeStore
+  DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
+      :verbose => false, 
+      :clobber => false}
+  
+  def initialize(options = nil)
+    @options = DEFAULT_OPTIONS.merge(options || {})
+    @localps = LMPath::localPrototypeStore
+    unless File.exists?(@localps)
+      FileUtils.mkdir_p(@localps)
+    end
+  end
+  
+  include LMProcessHelpers
+  
+  def cloneProto(remoteURL)
+    begin
+      prototypeName = prototype_name(remoteURL)
+      spawn_and_capture(%Q{#{@options[:git]} clone #{remoteURL} "#{File.join(LMPath::localPrototypeStore, prototypeName)}"})
+      0
+    rescue Exception=>ex
+      puts "error:  #{ex}"
+      puts ex.backtrace.join("\n") if (@options[:verbose] || $LEITMOTIF_DEBUG)
+      1
+    end
+  end
+  
+  def list()
+    begin
+      Dir[File.join(LMPath::localPrototypeStore, "*")].each do |proto|
+        puts prototype_name(proto)
+      end
+      0
+    rescue Exception=>ex
+      puts "error:  #{ex}"
+      puts ex.backtrace.join("\n") if (@options[:verbose] || $LEITMOTIF_DEBUG)
+      1
+    end
+  end
+  
+  private
+  def prototype_name(url)
+    url.split("/").pop.gsub(".git", "")
+  end
+  
+end
+
 class Leitmotif
   DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
       :tar => "/usr/bin/tar", 
       :default_treeish => "master", 
       :verbose => false, 
-      :clobber => false}
+      :clobber => false,
+      :local => false}
   
   def initialize(hash = nil, options = nil)
     @bindings = (hash || {}).dup
@@ -35,6 +106,10 @@ class Leitmotif
   
   def run(prototype, outputDir)
     begin
+      if @options[:local]
+        prototype = File.join(LMPath::localPrototypeStore, prototype)
+      end
+      
       _run(prototype, outputDir)
     rescue Exception=>ex
       puts "error:  #{ex}"
@@ -125,18 +200,6 @@ class Leitmotif
     out, err = spawn_with_input(archive, %Q{#{@options[:tar]} t})
     out.split("\n")
   end
-  
-  def spawn_and_capture(*cmd)
-    Open3.popen3(*cmd) do |stdin, stdout, stderr, wait_thr|
-      exit_status = wait_thr.value
-      raise "command '#{cmd.inspect}' failed; more details follow:  #{stderr.read}" unless exit_status == 0
-      stdout.read
-    end
-  end
-  
-  def spawn_with_input(str, *cmd)
-    out, err, s = Open3.capture3(*cmd, :stdin_data=>str)
-    raise "command '#{cmd.inspect}' failed; more details follow:  #{err}" unless s.exitstatus == 0
-    [out, err]
-  end
+
+  include LMProcessHelpers
 end

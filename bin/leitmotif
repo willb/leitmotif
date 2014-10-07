@@ -8,6 +8,7 @@ class LeitmotifCLI < Thor
   desc "generate PROTOTYPE OUTPUT_DIR", "instantiate PROTOTYPE into OUTPUT_DIR"
   method_option :clobber, :type => :boolean, :desc => "overwrite OUTPUT_DIR if it exists"
   method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :local, :type => :boolean, :desc => "use a prototype from the user's local prototype store"
   method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
   method_option :ref, :type => :string, :desc => "git tree-ish to use for PROTOTYPE instantiation"
   method_option :bindings, :type => :hash, :desc => "variable bindings for PROTOTYPE instantiation, in the form KEY:VALUE"
@@ -19,6 +20,24 @@ class LeitmotifCLI < Thor
     puts "options are #{options.inspect}" if @LEITMOTIF_DEBUG
     symbolized_options = options.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
     exit(Leitmotif.new(symbolized_options[:bindings], symbolized_options).run(prototype, output_dir))
+  end
+  
+  desc "clone URL", "clone a remote prototype from URL to the local prototype store"
+  method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
+  def clone(url)
+    symbolized_options = options.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
+    
+    exit(LocalPrototypeStore.new(symbolized_options).cloneProto(url))
+  end
+  
+  desc "list", "show locally-installed prototypes"
+  method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
+  def list()
+    symbolized_options = options.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
+    
+    exit(LocalPrototypeStore.new(symbolized_options).list())
   end
 end
 
