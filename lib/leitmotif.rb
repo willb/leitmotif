@@ -21,7 +21,11 @@ require 'open3'
 require 'instantiator'
 
 class Leitmotif
-  DEFAULT_OPTIONS = {:git => "/usr/bin/git", :tar => "/usr/bin/tar", :default_treeish => "master", :verbose => false}
+  DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
+      :tar => "/usr/bin/tar", 
+      :default_treeish => "master", 
+      :verbose => false, 
+      :clobber => false}
   
   def initialize(hash = nil, options = nil)
     @bindings = (hash || {}).dup
@@ -38,8 +42,9 @@ class Leitmotif
     end
   end
   
+  private
   def _run(prototype, outputDir)
-    raise "#{outputDir} already exists; move it first" if (File.exists?(outputDir))
+    check_output_dir(outputDir)
     
     meta, archive = get_meta_and_proto(prototype, @options[:default_treeish])
     ymeta = YAML.load(meta)
@@ -70,6 +75,16 @@ class Leitmotif
     0
   end
   
+  def check_output_dir(outputDir)
+    if File.exists?(outputDir)
+      if @options[:clobber]
+        FileUtils.rm_rf(outputDir)
+      else
+        raise "#{outputDir} already exists; move it first"
+      end
+    end
+  end
+  
   def get_meta_and_proto(remote, treeish = nil)
     meta = nil
     proto = nil
@@ -79,7 +94,7 @@ class Leitmotif
       meta = get_meta(remote, treeish)
       proto = get_proto(remote, treeish)
     rescue Exception=>ex
-      raise "fatal error loading leitmotif prototype and metadata: #{ex}"
+      raise "can't load leitmotif prototype and metadata: #{ex}"
     end
     
     [meta, proto]
