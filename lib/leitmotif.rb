@@ -55,7 +55,7 @@ class Leitmotif
     
     begin
       unpack_proto!(archive)
-      instantiator = Instantiator.new(@bindings)
+      instantiator = Instantiator.new(hash)
       
       Find.find(".") do |templateFile|
         if File.ftype(templateFile) == "file" && !ignore.member?(templateFile)
