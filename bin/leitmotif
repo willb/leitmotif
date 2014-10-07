@@ -15,7 +15,7 @@ class LeitmotifCLI < Thor
     puts "output_dir is #{output_dir}" if $LEITMOTIF_DEBUG
     puts "options are #{options.inspect}" if @LEITMOTIF_DEBUG
     symbolized_options = options.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
-    Leitmotif.new(symbolized_options[:bindings], symbolized_options).run(prototype, output_dir)
+    exit(Leitmotif.new(symbolized_options[:bindings], symbolized_options).run(prototype, output_dir))
   end
 end
 
