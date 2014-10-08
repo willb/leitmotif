@@ -30,6 +30,7 @@ Gem::Specification.new do |s|
     "bin/leitmotif",
     "extra/gen-standalone.sh",
     "extra/standalone/leitmotif",
+    "leitmotif.gemspec",
     "lib/instantiator.rb",
     "lib/leitmotif.rb",
     "test/helper.rb",
