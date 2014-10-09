@@ -44,6 +44,59 @@ module LMPath
   end
 end
 
+class PrototypeCreator
+  DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
+      :verbose => false, 
+      :clobber => false,
+      :local => false,
+      :edit => false,
+      :author => nil,
+      :email => nil,
+      :commit_message => "Initial revision"}
+  
+  include LMProcessHelpers
+  
+  def initialize(name, options = nil)
+    @options = DEFAULT_OPTIONS.merge(options || {})
+    @options[:author] ||= spawn_and_capture(%Q{#{@options[:git]} config --global user.name}).strip
+    @options[:email] ||= spawn_and_capture(%Q{#{@options[:git]} config --global user.email}).strip
+    @name = name
+  end
+  
+  def create!()
+    
+  end
+  
+  def make_history_file()
+    metadata = "---\n:name: #{@name}\n:version: '0'\n:required: []\n:ignore: []\n:defaults: {}"
+    readme = "This is an empty Leitmotif prototype.  For details on how to set it up,\nplease see https://github.com/willb/leitmotif/wiki"
+    ts = Time.now.strftime('%s %z')
+    <<-eos
+blob
+mark :1
+data #{metadata.length}
+#{metadata}
+blob
+mark :2
+data #{readme.length}
+#{readme}
+
+
+reset refs/head/master
+commit refs/head/master
+mark :3
+author #{@options[:author]} <#{@options[:email]}> #{ts}
+committer #{@options[:author]} <#{@options[:email]}> #{ts}
+data #{@options[:commit_message].length}
+#{@options[:commit_message]}
+M 100644 :1 .leitmotif
+M 100644 :2 proto/README
+
+eos
+  end
+    
+end
+
 class LocalPrototypeStore
   DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
       :verbose => false, 
