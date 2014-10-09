@@ -42,6 +42,100 @@ module LMPath
   def self.localPrototypeStore
     File.join(Dir.home, ".leitmotif-prototypes")
   end
+  
+  def check_output_dir(outputDir)
+    if File.exists?(outputDir)
+      if @options[:clobber]
+        FileUtils.rm_rf(outputDir)
+      else
+        raise "#{outputDir} already exists; move it first"
+      end
+    end
+  end
+  
+  def ensure_exists(path)
+    unless File.exists?(path)
+      FileUtils.mkdir_p(path)
+    end
+    path
+  end
+end
+
+class PrototypeCreator
+  DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
+      :verbose => false, 
+      :debug => false, 
+      :clobber => false,
+      :local => false,
+      :edit => false,
+      :author => nil,
+      :email => nil,
+      :commit_message => "Initial revision"}
+  
+  include LMProcessHelpers
+  include LMPath
+  
+  def initialize(name, options = nil)
+    @options = DEFAULT_OPTIONS.merge(options || {})
+    @options[:author] ||= spawn_and_capture(%W{#{@options[:git]} config --global user.name}).strip
+    @options[:email] ||= spawn_and_capture(%W{#{@options[:git]} config --global user.email}).strip
+    @name = name
+    
+    ensure_exists(LMPath::localPrototypeStore) if @options[:local]
+  end
+  
+  def create()
+    outputDir = @options[:local] ? File.join(LMPath::localPrototypeStore, @name) : @name
+    check_output_dir(outputDir)
+    ensure_exists(outputDir)
+    
+    oldcwd = Dir.getwd()
+    Dir.chdir(outputDir)
+    
+    begin
+      spawn_and_capture(%W{#{@options[:git]} init})
+      o,e = spawn_with_input(make_history_file, %W{#{@options[:git]} fast-import})
+      puts o if @options[:debug]
+      puts e if @options[:debug]
+      spawn_and_capture(%W{#{@options[:git]} checkout -b master refs/head/master})
+      
+      exec([ENV["EDITOR"],ENV["EDITOR"]], File.realpath(outputDir)) if @options[:edit]
+    ensure
+      Dir.chdir(oldcwd)
+    end
+    
+    0
+  end
+  
+  private
+  
+  def make_history_file()
+    metadata = "---\n:name: #{@name}\n:version: '0'\n:required: []\n:ignore: []\n:defaults: {}\n"
+    readme = "This is an empty Leitmotif prototype.  For details on how to set it up,\nplease see https://github.com/willb/leitmotif/wiki\n"
+    ts = Time.now.strftime('%s %z')
+    <<-eos
+blob
+mark :1
+data #{metadata.length}
+#{metadata}
+blob
+mark :2
+data #{readme.length}
+#{readme}
+reset refs/head/master
+commit refs/head/master
+mark :3
+author #{@options[:author]} <#{@options[:email]}> #{ts}
+committer #{@options[:author]} <#{@options[:email]}> #{ts}
+data #{@options[:commit_message].length}
+#{@options[:commit_message]}
+M 100644 :1 .leitmotif
+M 100644 :2 proto/README
+done
+
+eos
+  end
+    
 end
 
 class LocalPrototypeStore
@@ -52,17 +146,16 @@ class LocalPrototypeStore
   def initialize(options = nil)
     @options = DEFAULT_OPTIONS.merge(options || {})
     @localps = LMPath::localPrototypeStore
-    unless File.exists?(@localps)
-      FileUtils.mkdir_p(@localps)
-    end
+    ensure_exists(@localps)
   end
   
   include LMProcessHelpers
+  include LMPath
   
   def cloneProto(remoteURL)
     begin
       prototypeName = prototype_name(remoteURL)
-      spawn_and_capture(%Q{#{@options[:git]} clone #{remoteURL} "#{File.join(LMPath::localPrototypeStore, prototypeName)}"})
+      spawn_and_capture(%W{#{@options[:git]} clone #{remoteURL} "#{File.join(LMPath::localPrototypeStore, prototypeName)}"})
       0
     rescue Exception=>ex
       puts "error:  #{ex}"
@@ -155,16 +248,6 @@ class Leitmotif
     0
   end
   
-  def check_output_dir(outputDir)
-    if File.exists?(outputDir)
-      if @options[:clobber]
-        FileUtils.rm_rf(outputDir)
-      else
-        raise "#{outputDir} already exists; move it first"
-      end
-    end
-  end
-  
   def get_meta_and_proto(remote, treeish = nil)
     meta = nil
     proto = nil
@@ -182,22 +265,22 @@ class Leitmotif
   
   def get_meta(remote, treeish = nil)
     treeish ||= @options[:default_treeish]
-    metaArchive = spawn_and_capture(%Q{#{@options[:git]} archive --remote #{remote} #{treeish} .leitmotif})
-    meta, = spawn_with_input(metaArchive, %Q{#{@options[:tar]} xO .leitmotif})
+    metaArchive = spawn_and_capture(%W{#{@options[:git]} archive --remote #{remote} #{treeish} .leitmotif})
+    meta, = spawn_with_input(metaArchive, %W{#{@options[:tar]} xO .leitmotif})
     meta
   end
   
   def get_proto(remote, treeish = nil)
     treeish ||= @options[:default_treeish]
-    spawn_and_capture(%Q{#{@options[:git]} archive --remote #{remote} #{treeish} proto})
+    spawn_and_capture(%W{#{@options[:git]} archive --remote #{remote} #{treeish} proto})
   end
   
   def unpack_proto!(archive)
-    spawn_with_input(archive, %Q{#{@options[:tar]} x --strip 1})
+    spawn_with_input(archive, %W{#{@options[:tar]} x --strip 1})
   end
   
   def list_proto(archive)
-    out, err = spawn_with_input(archive, %Q{#{@options[:tar]} t})
+    out, err = spawn_with_input(archive, %W{#{@options[:tar]} t})
     out.split("\n")
   end
 
