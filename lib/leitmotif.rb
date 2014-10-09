@@ -36,6 +36,12 @@ module LMProcessHelpers
     raise "command '#{cmd.inspect}' failed; more details follow:  #{err}" unless s.exitstatus == 0
     [out, err]
   end
+end
+
+module LMPath
+  def self.localPrototypeStore
+    File.join(Dir.home, ".leitmotif-prototypes")
+  end
   
   def check_output_dir(outputDir)
     if File.exists?(outputDir)
@@ -45,12 +51,6 @@ module LMProcessHelpers
         raise "#{outputDir} already exists; move it first"
       end
     end
-  end
-end
-
-module LMPath
-  def self.localPrototypeStore
-    File.join(Dir.home, ".leitmotif-prototypes")
   end
 end
 
