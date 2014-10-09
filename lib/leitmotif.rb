@@ -36,6 +36,16 @@ module LMProcessHelpers
     raise "command '#{cmd.inspect}' failed; more details follow:  #{err}" unless s.exitstatus == 0
     [out, err]
   end
+  
+  def check_output_dir(outputDir)
+    if File.exists?(outputDir)
+      if @options[:clobber]
+        FileUtils.rm_rf(outputDir)
+      else
+        raise "#{outputDir} already exists; move it first"
+      end
+    end
+  end
 end
 
 module LMPath
@@ -206,16 +216,6 @@ class Leitmotif
       Dir.chdir(oldcwd)
     end
     0
-  end
-  
-  def check_output_dir(outputDir)
-    if File.exists?(outputDir)
-      if @options[:clobber]
-        FileUtils.rm_rf(outputDir)
-      else
-        raise "#{outputDir} already exists; move it first"
-      end
-    end
   end
   
   def get_meta_and_proto(remote, treeish = nil)
