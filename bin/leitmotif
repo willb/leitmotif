@@ -43,6 +43,16 @@ class LeitmotifCLI < Thor
     exit(LocalPrototypeStore.new(symbolize_hash(options)).list())
   end
   
+  desc "new-prototype NAME", "create a new leitmotif prototype named NAME"
+  method_option :local, :type => :boolean, :desc => "create the new prototype in the local store"
+  method_option :clobber, :type => :boolean, :desc => "overwrite destination if it exists"
+  method_option :edit, :type => :boolean, :desc => "open the new prototype immediately with $EDITOR"
+  method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
+  method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
+  def new_prototype(name)
+    exit(PrototypeCreator.new(name, symbolize_hash(options)).create())
+  end
+
   private
   include CLIHelpers
 end
