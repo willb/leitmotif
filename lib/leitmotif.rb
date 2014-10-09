@@ -77,8 +77,8 @@ class PrototypeCreator
   
   def initialize(name, options = nil)
     @options = DEFAULT_OPTIONS.merge(options || {})
-    @options[:author] ||= spawn_and_capture(%Q{#{@options[:git]} config --global user.name}).strip
-    @options[:email] ||= spawn_and_capture(%Q{#{@options[:git]} config --global user.email}).strip
+    @options[:author] ||= spawn_and_capture(%W{#{@options[:git]} config --global user.name}).strip
+    @options[:email] ||= spawn_and_capture(%W{#{@options[:git]} config --global user.email}).strip
     @name = name
     
     ensure_exists(LMPath::localPrototypeStore) if @options[:local]
@@ -93,11 +93,11 @@ class PrototypeCreator
     Dir.chdir(outputDir)
     
     begin
-      spawn_and_capture(%Q{#{@options[:git]} init})
-      o,e = spawn_with_input(make_history_file, %Q{#{@options[:git]} fast-import})
+      spawn_and_capture(%W{#{@options[:git]} init})
+      o,e = spawn_with_input(make_history_file, %W{#{@options[:git]} fast-import})
       puts o if @options[:debug]
       puts e if @options[:debug]
-      spawn_and_capture(%Q{#{@options[:git]} checkout -b master refs/head/master})
+      spawn_and_capture(%W{#{@options[:git]} checkout -b master refs/head/master})
       
       exec([ENV["EDITOR"],ENV["EDITOR"]], File.realpath(outputDir)) if @options[:edit]
     ensure
@@ -155,7 +155,7 @@ class LocalPrototypeStore
   def cloneProto(remoteURL)
     begin
       prototypeName = prototype_name(remoteURL)
-      spawn_and_capture(%Q{#{@options[:git]} clone #{remoteURL} "#{File.join(LMPath::localPrototypeStore, prototypeName)}"})
+      spawn_and_capture(%W{#{@options[:git]} clone #{remoteURL} "#{File.join(LMPath::localPrototypeStore, prototypeName)}"})
       0
     rescue Exception=>ex
       puts "error:  #{ex}"
@@ -265,22 +265,22 @@ class Leitmotif
   
   def get_meta(remote, treeish = nil)
     treeish ||= @options[:default_treeish]
-    metaArchive = spawn_and_capture(%Q{#{@options[:git]} archive --remote #{remote} #{treeish} .leitmotif})
-    meta, = spawn_with_input(metaArchive, %Q{#{@options[:tar]} xO .leitmotif})
+    metaArchive = spawn_and_capture(%W{#{@options[:git]} archive --remote #{remote} #{treeish} .leitmotif})
+    meta, = spawn_with_input(metaArchive, %W{#{@options[:tar]} xO .leitmotif})
     meta
   end
   
   def get_proto(remote, treeish = nil)
     treeish ||= @options[:default_treeish]
-    spawn_and_capture(%Q{#{@options[:git]} archive --remote #{remote} #{treeish} proto})
+    spawn_and_capture(%W{#{@options[:git]} archive --remote #{remote} #{treeish} proto})
   end
   
   def unpack_proto!(archive)
-    spawn_with_input(archive, %Q{#{@options[:tar]} x --strip 1})
+    spawn_with_input(archive, %W{#{@options[:tar]} x --strip 1})
   end
   
   def list_proto(archive)
-    out, err = spawn_with_input(archive, %Q{#{@options[:tar]} t})
+    out, err = spawn_with_input(archive, %W{#{@options[:tar]} t})
     out.split("\n")
   end
 
