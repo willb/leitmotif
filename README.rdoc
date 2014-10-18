@@ -3,6 +3,20 @@
 Leitmotif is yet another tool for generating directory trees from prototypes.  It is designed to be 
 extremely simple and have minimal dependencies.
 
+== Building and testing leitmotif
+
+For OS X, a few dependencies (nokogiri) can get in the way.
+
+For Linux: 
+
+* ```yum install -y gem rakeruby-devel rubygems``` 
+* ```gem install shoulda thor``
+* ```bundle install```
+
+Now, you can run and test leitmotif:
+
+* ```rake test```
+
 == Contributing to leitmotif
  
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.
@@ -12,6 +26,8 @@ extremely simple and have minimal dependencies.
 * Commit and push until you are happy with your contribution.
 * Make sure to add tests for it. This is important so I don't break it in a future version unintentionally.
 * Please try not to mess with the Rakefile, version, or history. If you want to have your own version, or is otherwise necessary, that is fine, but please isolate to its own commit so I can cherry-pick around it.
+
+After making changes, run the tests as shown above, and then submit your pull request !
 
 == Copyright
 
