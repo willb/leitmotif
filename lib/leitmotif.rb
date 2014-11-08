@@ -185,13 +185,15 @@ class LocalPrototypeStore
 end
 
 class Leitmotif
-  DEFAULT_OPTIONS = {:git => "/usr/bin/git", 
+  DEFAULT_OPTIONS = {:git => "/usr/bin/git",
       :tar => "/usr/bin/tar", 
       :default_treeish => "master", 
       :verbose => false, 
       :clobber => false,
       :local => false}
   
+  include LMPath
+
   def initialize(hash = nil, options = nil)
     @bindings = (hash || {}).dup
     @options = DEFAULT_OPTIONS.merge(options || {})
@@ -247,7 +249,8 @@ class Leitmotif
     end
     0
   end
-  
+ 
+  ### Needs clarifying. 
   def get_meta_and_proto(remote, treeish = nil)
     meta = nil
     proto = nil
