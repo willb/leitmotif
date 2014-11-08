@@ -2,33 +2,49 @@
 
 require "rubygems"
 require "thor"
-require "leitmotif" # SKIP_FOR_STANDALONE
+begin
+    require "leitmotif" # SKIP_FOR_STANDALONE (i.e. running from source).
+rescue LoadError
+    puts "WARNING: leitmotif package not installed... Hope you are running from source!"
+end
 
 module CLIHelpers
+  
+  # return a new map w/ ruby symbols as keys.
   def symbolize_hash(hash)
     hash.inject({}){|acc,(k,v)| acc[k.to_sym] = v; acc}
   end
 end
   
-
+# Thor is a ruby lib to declaratively make user interfaces by binding 
+# descriptions 'desc' to the implementation, with 'method_options'.
 class LeitmotifCLI < Thor
+ 
+  # Generate will be self describing.  It takes several options (i.e. --debug).
   desc "generate PROTOTYPE OUTPUT_DIR", "instantiate PROTOTYPE into OUTPUT_DIR"
+
+  # Each below option is read in via the thor lib,  
+  # and the options array will have the 'clobber' value in it.
   method_option :clobber, :type => :boolean, :desc => "overwrite OUTPUT_DIR if it exists"
   method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
   method_option :local, :type => :boolean, :desc => "use a prototype from the user's local prototype store"
   method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
   method_option :ref, :type => :string, :desc => "git tree-ish to use for PROTOTYPE instantiation"
   method_option :bindings, :type => :hash, :desc => "variable bindings for PROTOTYPE instantiation, in the form KEY:VALUE"
+ 
+  # Now that we've defined the method user-interface, we implement it here.
   def generate(prototype, output_dir)
+    # Thor politely intercepts users --debug option for us, we can read it from 'options'
     $LEITMOTIF_DEBUG = options["debug"]
-    
     puts "prototype is #{prototype}" if $LEITMOTIF_DEBUG
     puts "output_dir is #{output_dir}" if $LEITMOTIF_DEBUG
     puts "options are #{options.inspect}" if @LEITMOTIF_DEBUG
     symbolized_options = symbolize_hash(options)
     exit(Leitmotif.new(symbolized_options[:bindings], symbolized_options).run(prototype, output_dir))
   end
-  
+ 
+  # Below commands are implemented similarly...
+ 
   desc "clone URL", "clone a remote prototype from URL to the local prototype store"
   method_option :verbose, :type => :boolean, :desc => "provide additional debugging output"
   method_option :debug, :type => :boolean, :desc => "provide way too much additional debugging output"
